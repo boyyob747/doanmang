@@ -163,3 +163,64 @@ int __cdecl main()
 	getchar();
 }
 
+#//2
+// DoAnMang.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <stdio.h>
+#include <stdlib.h>
+#pragma comment(lib, "IPHLPAPI.lib")
+#include <conio.h>
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+
+/* Note: could also use malloc() and free() */
+IP_ADAPTER_INFO  *pAdapterInfo;
+ULONG            ulOutBufLen;
+DWORD            dwRetVal;
+int main() 
+{
+	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
+		free(pAdapterInfo);
+		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+	}
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
+		printf("GetAdaptersInfo call failed with %d\n", dwRetVal);
+	}
+	else {
+		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+		printf("Windows IP Configuration\n\n\n");
+		while (pAdapter) {
+			//printf("Adapter Name: %s\n", pAdapter->AdapterName);
+			printf("%s\n\n", pAdapter->Description);
+			printf("\tAdapter Addr: \t");
+			for (UINT i = 0; i < pAdapter->AddressLength; i++) {
+				if (i == (pAdapter->AddressLength - 1))
+					printf("%.2X\n", (int)pAdapter->Address[i]);
+				else
+					printf("%.2X-", (int)pAdapter->Address[i]);
+			}
+			printf("\tIPv4 Address. . . . . . . . . . . : %s\n", pAdapter->IpAddressList.IpAddress.String);
+			printf("\tSubnet Mask . . . . . . . . . . . : %s\n", pAdapter->IpAddressList.IpMask.String);
+			printf("\tDefault Gateway . . . . . . . . . : %s\n\n", pAdapter->GatewayList.IpAddress.String);
+			/*if (pAdapter->DhcpEnabled) {
+				printf("\tDHCP Enabled: Yes\n");
+				printf("\t\tDHCP Server: \t%s\n", pAdapter->DhcpServer.IpAddress.String);
+			}
+			else
+				printf("\tDHCP Enabled: No\n");*/
+			
+
+			pAdapter = pAdapter->Next;
+		}
+	}
+
+	getchar();
+}
+
