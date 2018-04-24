@@ -301,3 +301,115 @@ int main(int argc, char *argv[])
 	getchar();
 	return 0;
 }
+//new ip 6
+#include "stdafx.h"
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
+#include <stdio.h>
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <ws2tcpip.h>
+#include <iostream>
+using namespace std;
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "iphlpapi.lib")
+IP_ADAPTER_INFO  *pAdapterInfo;
+ULONG            ulOutBufLen;
+DWORD            dwRetVal;
+
+void print_adapter(PIP_ADAPTER_ADDRESSES aa)
+{
+	char buf[BUFSIZ];
+	memset(buf, 0, BUFSIZ);
+	WideCharToMultiByte(CP_ACP, 0, aa->FriendlyName, wcslen(aa->FriendlyName), buf, BUFSIZ, NULL, NULL);
+	printf("%s :\n\n", buf);
+	/*
+	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
+	free(pAdapterInfo);
+	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+	}
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
+	printf("GetAdaptersInfo call failed with %d\n", dwRetVal);
+	}
+	PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+	while (pAdapter) {
+	if (pAdapter->AdapterName == aa->AdapterName) {
+	printf("%s\n\n", pAdapter->Description);
+	printf("\tAdapter Addr: \t");
+	for (UINT i = 0; i < pAdapter->AddressLength; i++) {
+	if (i == (pAdapter->AddressLength - 1))
+	printf("%.2X\n", (int)pAdapter->Address[i]);
+	else
+	printf("%.2X-", (int)pAdapter->Address[i]);
+	}
+	printf("\tIPv4 Address. . . . . . . . . . . : %s\n", pAdapter->IpAddressList.IpAddress.String);
+	printf("\tSubnet Mask . . . . . . . . . . . : %s\n", pAdapter->IpAddressList.IpMask.String);
+	printf("\tDefault Gateway . . . . . . . . . : %s\n\n", pAdapter->GatewayList.IpAddress.String);
+	}
+	pAdapter = pAdapter->Next;
+	}
+	*/
+	
+}
+
+void print_addr(PIP_ADAPTER_UNICAST_ADDRESS ua)
+{
+	char buf[BUFSIZ];
+
+	int family = ua->Address.lpSockaddr->sa_family;
+	printf("\t%s ", family == AF_INET ? "IPv4 Address. . . . . . . . . . . : " : "Link-local IPv6 Address . . . . . : ");
+
+	memset(buf, 0, BUFSIZ);
+	getnameinfo(ua->Address.lpSockaddr, ua->Address.iSockaddrLength, buf, sizeof(buf), NULL, 0, NI_NUMERICHOST);
+	printf("%s\n", buf);
+}
+bool print_ipaddress()
+{
+	DWORD rv, size;
+	PIP_ADAPTER_ADDRESSES adapter_addresses, aa;
+	PIP_ADAPTER_UNICAST_ADDRESS ua;
+
+	rv = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, NULL, &size);
+	if (rv != ERROR_BUFFER_OVERFLOW) {
+		fprintf(stderr, "GetAdaptersAddresses() failed...");
+		return false;
+	}
+	adapter_addresses = (PIP_ADAPTER_ADDRESSES)malloc(size);
+
+	rv = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, adapter_addresses, &size);
+	if (rv != ERROR_SUCCESS) {
+		fprintf(stderr, "GetAdaptersAddresses() failed...");
+		free(adapter_addresses);
+		return false;
+	}
+	printf("\nWindows IP Configuration\n\n");
+
+
+	for (aa = adapter_addresses; aa != NULL; aa = aa->Next) {
+		print_adapter(aa);
+		for (ua = aa->FirstUnicastAddress; ua != NULL; ua = ua->Next) {
+			print_addr(ua);
+		}
+	}
+
+	free(adapter_addresses);
+}
+
+int main(int argc, char *argv[])
+{
+	WSAData d;
+	if (WSAStartup(MAKEWORD(2, 2), &d) != 0) {
+		return -1;
+	}
+
+	print_ipaddress();
+
+	WSACleanup();
+	getchar();
+	return 0;
+}
